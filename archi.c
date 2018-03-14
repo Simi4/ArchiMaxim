@@ -1,11 +1,12 @@
 #include "archi.h"
 #include "common.h"
 
-static void write_to_bin(const char *path, int outbin_fd)
+static void write_to_bin(const char *rootpath, const char *path, int outbin_fd)
 {
-	size_t pathlen = strlen(path);
+	const char *newpath = safe_clear_path(rootpath, path);
+	size_t pathlen = strlen(newpath);
 	safe_write(outbin_fd, &pathlen, sizeof(size_t));
-	safe_write(outbin_fd, path, pathlen);
+	safe_write(outbin_fd, newpath, pathlen);
 	int in_fd = safe_open(path, O_RDONLY);
 	size_t datalen = safe_get_file_size(in_fd);
 	safe_write(outbin_fd, &datalen, sizeof(size_t));
@@ -21,7 +22,7 @@ void pack_dir(const char *indir, const char *outbin)
 	SAFE_START_STAT();
 
 	int outbin_fd = safe_creat(outbin, S_IRWXU);
-	size_t filecount = safe_find_files_in_dir(indir, outbin_fd, &write_to_bin);
+	size_t filecount = safe_find_files_in_dir(indir, indir, outbin_fd, &write_to_bin);
 	safe_write(outbin_fd, &filecount, sizeof(size_t));
 	safe_close(outbin_fd);
 

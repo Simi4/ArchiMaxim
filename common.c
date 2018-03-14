@@ -4,11 +4,12 @@
 
 int count_allocations;
 int count_file_descriptors;
+const char pathsep = '/';
 
 
 
 int safe_creat(const char *pathname, mode_t mode)
-{  
+{
 	int fd = creat(pathname, mode);
 	assert( fd != -1 );
 	count_file_descriptors++;
@@ -16,7 +17,7 @@ int safe_creat(const char *pathname, mode_t mode)
 }
 
 int safe_open(const char *pathname, int flags)
-{  
+{
 	int fd = open(pathname, flags);
 	assert( fd != -1 );
 	count_file_descriptors++;
@@ -29,14 +30,14 @@ void safe_mkdirs(const char *dir, mode_t mode)
     char *tmp = safe_malloc(len + 1);
 	strcpy(tmp, dir);
 	assert( tmp[len] == '\0' );
-    for (size_t i = 1; i <= len; i++) {
-   		if (tmp[i] == '/') {
-        	tmp[i] = 0;
-            mkdir(tmp, mode) == 0;
-            tmp[i] = '/';
-        }
+	for (size_t i = 1; i <= len; i++) {
+		if (tmp[i] == pathsep) {
+			tmp[i] = 0;
+			mkdir(tmp, mode) == 0;
+			tmp[i] = pathsep;
+		}
 	}
-    mkdir(tmp, mode);
+	mkdir(tmp, mode);
 	safe_free(tmp);
 }
 
@@ -50,35 +51,35 @@ int safe_creat_from_filepath(const char *pathname, mode_t mode)
 	return safe_creat(pathname, mode);
 }
 
-size_t safe_find_files_in_dir(const char *name, int outbin_fd, file_func_ptr func)
+size_t safe_find_files_in_dir(const char *rootpath, const char *name, int outbin_fd, file_func_ptr func)
 {
-    DIR *dir;
-    struct dirent *entry;
+	DIR *dir;
+	struct dirent *entry;
 	size_t filecount = 0;
 
-    if (!(dir = opendir(name)))
-        return filecount;
+	if (!(dir = opendir(name)))
+		return filecount;
 
-    while ((entry = readdir(dir)) != NULL) {
-        if (entry->d_type == DT_DIR) {
-            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-                continue;
-            char *path = safe_join_str(name, entry->d_name);
-            filecount += safe_find_files_in_dir(path, outbin_fd, func);
+	while ((entry = readdir(dir)) != NULL) {
+		if (entry->d_type == DT_DIR) {
+			if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+				continue;
+			char *path = safe_join_str(name, entry->d_name);
+			filecount += safe_find_files_in_dir(rootpath, path, outbin_fd, func);
 			safe_free(path);
-        } else {
-            char *path = safe_join_str(name, entry->d_name);
-            func(path, outbin_fd);
+		} else {
+			char *path = safe_join_str(name, entry->d_name);
+			func(rootpath, path, outbin_fd);
 			safe_free(path);
 			filecount++;
-        }
-    }
-    closedir(dir);
+		}
+	}
+	closedir(dir);
 	return filecount;
 }
 
 void safe_read(int fd, void *buf, size_t count)
-{  
+{
 	assert( read(fd, buf, count) == count );
 }
 
@@ -103,18 +104,18 @@ void safe_free(void *buf)
 }
 
 void safe_write(int fd, const void *buf, size_t count)
-{  
+{
 	assert( write(fd, buf, count) == count );
 }
 
 void safe_close(int fd)
-{  
+{
 	assert( close(fd) == 0 );
 	count_file_descriptors--;
 }
 
 size_t safe_get_file_size(int fd)
-{  
+{
 	struct stat st;
 	assert( fstat(fd, &st) == 0 );
 	return st.st_size;
@@ -122,11 +123,16 @@ size_t safe_get_file_size(int fd)
 
 char* safe_join_str(const char *s1, const char *s2)
 {
-	size_t len = strlen(s1) + strlen(s2) + 1;
+	size_t len = strlen(s1) + strlen(s2) + sizeof(pathsep);
 	char *path = safe_malloc(len + 1);
-	assert( sprintf(path, "%s/%s", s1, s2) == len );
+	assert( sprintf(path, "%s%c%s", s1, pathsep, s2) == len );
 	assert( path[len] == '\0' );
 	return path;
+}
+
+const char* safe_clear_path(const char *rootpath, const char *fullpath)
+{
+	return fullpath + strlen(rootpath) + sizeof(pathsep);
 }
 
 void SAFE_START_STAT()
