@@ -14,7 +14,11 @@
 
 typedef void (*file_func_ptr)(const char *, const char *, int);
 
-size_t safe_find_files_in_dir(const char *rootpath, const char *name, int outbin_fd, file_func_ptr func);
+size_t safe_find_files_in_dir(
+	const char *rootpath,
+	const char *name,
+	int outbin_fd,
+	file_func_ptr func);
 
 int safe_creat(const char *pathname, mode_t mode);
 
@@ -28,7 +32,7 @@ void safe_read(int fd, void *buf, size_t count);
 
 void safe_lseek(int fd, off_t offset, int whence);
 
-void* safe_malloc(size_t size);
+void *safe_malloc(size_t size);
 
 void safe_free(void *buf);
 
@@ -38,10 +42,6 @@ void safe_close(int fd);
 
 size_t safe_get_file_size(int fd);
 
-char* safe_join_str(const char *s1, const char *s2);
+char *safe_join_str(const char *s1, const char *s2);
 
-const char* safe_clear_path(const char *rootpath, const char *fullpath);
-
-void SAFE_START_STAT();
-
-void SAFE_END_STAT();
+const char *safe_clear_path(const char *rootpath, const char *fullpath);
